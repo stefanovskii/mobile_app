@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1055845868589",
+    "project_id": "onthespot-37bf8",
+    "storage_bucket": "onthespot-37bf8.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1055845868589:android:47bb9d6a0bb2f1f7be44a4",
+        "android_client_info": {
+          "package_name": "com.company.OnTheSpot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQecNuwJDRvpCs5s25gIFMVVGbiSmgUNk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1055845868589:android:9aef4d91fca92a3ebe44a4",
+        "android_client_info": {
+          "package_name": "com.example.project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQecNuwJDRvpCs5s25gIFMVVGbiSmgUNk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
