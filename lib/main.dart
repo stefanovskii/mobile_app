@@ -62,17 +62,17 @@ class MyHomePage extends StatelessWidget {
                 // Display different icon based on login status
                 return user != null
                     ? IconButton(
-                  icon: const Icon(Icons.account_circle),
-                  onPressed: () {
-                    _navigateToProfile(context, user);
-                  },
-                )
+                        icon: const Icon(Icons.account_circle),
+                        onPressed: () {
+                          _navigateToProfile(context, user);
+                        },
+                      )
                     : IconButton(
-                  icon: const Icon(Icons.login),
-                  onPressed: () {
-                    _navigateToSignInPage(context);
-                  },
-                );
+                        icon: const Icon(Icons.login),
+                        onPressed: () {
+                          _navigateToSignInPage(context);
+                        },
+                      );
               } else {
                 // Return a loading indicator while waiting for auth state
                 return const CircularProgressIndicator();
@@ -110,20 +110,56 @@ class MyHomePage extends StatelessWidget {
                     // Add your logic for the clickable box here
                   },
                   child: Container(
-                    padding: EdgeInsets.all(40.0),
+                    width: 350.0,
+                    padding: EdgeInsets.all(20.0),
                     decoration: BoxDecoration(
-                      color: Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(8.0),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.5),
+                          spreadRadius: 2,
+                          blurRadius: 5,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      'Share where are you...',
-                      style: TextStyle(fontSize: 18.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Share where are you...',
+                            style: TextStyle(
+                              fontSize: 18.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              color: Colors.black,
+                              size: 24.0,
+                            ),
+                            SizedBox(width: 10.0), // Adjust the spacing between icons
+                            Icon(
+                              Icons.camera_alt,
+                              color: Colors.black,
+                              size: 24.0,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
                 SizedBox(height: 20.0),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end, // Align to the right
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  // Align to the right
                   children: [
                     Container(
                       padding: const EdgeInsets.all(20.0),
@@ -173,7 +209,6 @@ class MyHomePage extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class AuthScreen extends StatefulWidget {
@@ -186,7 +221,6 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -194,7 +228,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _lastNameController = TextEditingController();
 
   final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
-  GlobalKey<ScaffoldMessengerState>();
+      GlobalKey<ScaffoldMessengerState>();
 
   Future<void> _authAction() async {
     try {
@@ -217,8 +251,9 @@ class _AuthScreenState extends State<AuthScreen> {
         // Additional registration logic
         User? user = _auth.currentUser;
         if (user != null) {
-          await user.updateProfile(displayName:
-          "${_firstNameController.text} ${_lastNameController.text}");
+          await user.updateProfile(
+              displayName:
+                  "${_firstNameController.text} ${_lastNameController.text}");
         }
 
         _showSuccessDialog(
@@ -280,7 +315,7 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.only(left:20.0, right: 20.0),
+        padding: const EdgeInsets.only(left: 20.0, right: 20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -402,9 +437,4 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
     );
   }
-
 }
-
-
-
-
