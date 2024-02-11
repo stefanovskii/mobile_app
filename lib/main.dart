@@ -1,7 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'profile.dart';
+import 'package:image_picker/image_picker.dart';
+import 'image_input.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'info.dart';
+import 'infoWidget.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+
 
 import 'firebase_options.dart';
 
@@ -27,17 +37,75 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatelessWidget {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+class MyHomePage extends StatefulWidget {
 
-  Future<void> _signInWithFirebase() async {
-    try {
-      UserCredential userCredential = await _auth.signInAnonymously();
-      print("User logged in: ${userCredential.user?.uid}");
-    } catch (e) {
-      print("Error during login: $e");
+
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+class _MyHomePageState extends State<MyHomePage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final List<Info> infos = [];
+  File? _selectedImage;
+
+  void _takePicture() async {
+    final imagePicker = ImagePicker();
+    final pickedImage = await imagePicker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 300,
+    );
+
+    if (pickedImage == null) {
+      return;
+    }
+
+    _selectedImage = File(pickedImage.path);
+
+    if (_auth.currentUser != null) {
+      // User is signed in, proceed with image upload
+      await _uploadImageToFirebaseStorage();
+    } else {
+      // User is not signed in, prompt the user to sign in
+      _navigateToSignInPage(context);
     }
   }
+
+
+  Future<void> _uploadImageToFirebaseStorage() async {
+    if (_auth.currentUser == null) {
+      // User is not signed in, handle accordingly
+      return;
+    }
+
+    String userId = _auth.currentUser!.uid;
+    String imageName = DateTime.now().toString();
+    Reference storageReference = FirebaseStorage.instance.ref().child('user_images/$userId/$imageName.jpg');
+    UploadTask uploadTask = storageReference.putFile(_selectedImage!);
+
+    try {
+      await uploadTask.whenComplete(() async {
+        String imageUrl = await storageReference.getDownloadURL();
+        _saveImageToFirestore(imageUrl);
+      });
+    } catch (error) {
+      print("Error uploading image: $error");
+    }
+  }
+
+  Future<void> _saveImageToFirestore(String imageUrl) async {
+    if (_auth.currentUser != null) {
+      await _firestore
+          .collection('info')
+          .doc(_auth.currentUser!.uid)
+          .set({'photo': imageUrl}, SetOptions(merge: true));
+    }
+  }
+
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -62,17 +130,17 @@ class MyHomePage extends StatelessWidget {
                 // Display different icon based on login status
                 return user != null
                     ? IconButton(
-                        icon: const Icon(Icons.account_circle),
-                        onPressed: () {
-                          _navigateToProfile(context, user);
-                        },
-                      )
+                  icon: const Icon(Icons.account_circle),
+                  onPressed: () {
+                    _navigateToProfile(context, user);
+                  },
+                )
                     : IconButton(
-                        icon: const Icon(Icons.login),
-                        onPressed: () {
-                          _navigateToSignInPage(context);
-                        },
-                      );
+                  icon: const Icon(Icons.login),
+                  onPressed: () {
+                    _navigateToSignInPage(context);
+                  },
+                );
               } else {
                 // Return a loading indicator while waiting for auth state
                 return const CircularProgressIndicator();
@@ -107,59 +175,38 @@ class MyHomePage extends StatelessWidget {
                 SizedBox(height: 20.0),
                 GestureDetector(
                   onTap: () {
-                    // Add your logic for the clickable box here
+                    if (_auth.currentUser != null) {
+                      _takePicture();
+                    } else {
+                      _navigateToSignInPage(context);
+                    }
                   },
                   child: Container(
-                    width: 350.0,
-                    padding: EdgeInsets.all(20.0),
+                    padding: EdgeInsets.all(40.0),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          spreadRadius: 2,
-                          blurRadius: 5,
-                          offset: Offset(0, 3),
-                        ),
-                      ],
+                      color: Color(0xFFF5F5F5),
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'Share where are you...',
-                            style: TextStyle(
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.camera_alt),
+                          onPressed: null, // Set onPressed to null to disable the button
                         ),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: Colors.black,
-                              size: 24.0,
-                            ),
-                            SizedBox(width: 10.0), // Adjust the spacing between icons
-                            Icon(
-                              Icons.camera_alt,
-                              color: Colors.black,
-                              size: 24.0,
-                            ),
-                          ],
+                        SizedBox(width: 10),
+                        Text(
+                          'Share where are you...',
+                          style: TextStyle(fontSize: 18.0),
                         ),
                       ],
                     ),
                   ),
                 ),
+
                 SizedBox(height: 20.0),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
-                  // Align to the right
                   children: [
                     Container(
                       padding: const EdgeInsets.all(20.0),
@@ -180,15 +227,85 @@ class MyHomePage extends StatelessWidget {
           // Second Section
           Container(
             padding: EdgeInsets.all(16.0),
-            child: Text(
-              'Second Section',
-              style: TextStyle(fontSize: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  'Friends spots',
+                  style: TextStyle(fontSize: 20.0),
+                ),
+                const SizedBox(height: 10),
+                StreamBuilder(
+                  stream: _firestore.collection('info').doc(_auth.currentUser?.uid).snapshots(),
+                  builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+                    if (!snapshot.hasData || !snapshot.data!.exists) {
+                      return const CircularProgressIndicator();
+                    }
+
+                    var infoData = snapshot.data!.data() as Map<String, dynamic>;
+                    var photoUrl = infoData['photo'];
+
+                    return photoUrl != null && photoUrl.isNotEmpty
+                        ? Column(
+                      children: [
+                        // Display the photo
+                        Image.network(
+                          photoUrl,
+                          width: 300,
+                          height: 300,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ],
+                    )
+                        : const Text('No photos available');
+                  },
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+
+
+  // Future<void> _addInfoFunction(BuildContext context) async {
+  //   return showModalBottomSheet(
+  //     context: context,
+  //     builder: (_) {
+  //       return GestureDetector(
+  //         onTap: () {},
+  //         behavior: HitTestBehavior.opaque,
+  //         child: InfoWidget(
+  //           addInfo: _addInfo,
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
+  //
+  //
+  // Future<void> _addInfo(Info info) async {
+  //   User? currentUser = _auth.currentUser;
+  //
+  //   if (currentUser != null) {
+  //     await _firestore
+  //         .collection('info')
+  //         .doc(currentUser.uid)
+  //         .collection('userInfo')
+  //         .add({
+  //       'photo': info.photo,
+  //       'location': info.location,
+  //     });
+  //   }
+  //
+  //   setState(() {
+  //     infos.add(info);
+  //   });
+  // }
 
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
@@ -228,7 +345,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _lastNameController = TextEditingController();
 
   final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
-      GlobalKey<ScaffoldMessengerState>();
+  GlobalKey<ScaffoldMessengerState>();
 
   Future<void> _authAction() async {
     try {
@@ -253,7 +370,7 @@ class _AuthScreenState extends State<AuthScreen> {
         if (user != null) {
           await user.updateProfile(
               displayName:
-                  "${_firstNameController.text} ${_lastNameController.text}");
+              "${_firstNameController.text} ${_lastNameController.text}");
         }
 
         _showSuccessDialog(
