@@ -5,13 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'profile.dart';
 import 'package:image_picker/image_picker.dart';
-import 'image_input.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'info.dart';
-import 'infoWidget.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
-
 
 import 'firebase_options.dart';
 
@@ -38,15 +33,13 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-
-
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
+
 class _MyHomePageState extends State<MyHomePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final List<Info> infos = [];
   File? _selectedImage;
 
   void _takePicture() async {
@@ -59,28 +52,21 @@ class _MyHomePageState extends State<MyHomePage> {
     if (pickedImage == null) {
       return;
     }
-
     _selectedImage = File(pickedImage.path);
-
-    if (_auth.currentUser != null) {
-      // User is signed in, proceed with image upload
-      await _uploadImageToFirebaseStorage();
-    } else {
-      // User is not signed in, prompt the user to sign in
+    if (_auth.currentUser == null) {
       _navigateToSignInPage(context);
     }
   }
 
-
   Future<void> _uploadImageToFirebaseStorage() async {
     if (_auth.currentUser == null) {
-      // User is not signed in, handle accordingly
       return;
     }
 
     String userId = _auth.currentUser!.uid;
     String imageName = DateTime.now().toString();
-    Reference storageReference = FirebaseStorage.instance.ref().child('user_images/$userId/$imageName.jpg');
+    Reference storageReference =
+    FirebaseStorage.instance.ref().child('user_images/$userId/$imageName.jpg');
     UploadTask uploadTask = storageReference.putFile(_selectedImage!);
 
     try {
@@ -102,10 +88,13 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-
-
-
-
+  void _postPicture() {
+    if (_selectedImage != null) {
+      _uploadImageToFirebaseStorage();
+    } else {
+      print("No picture selected.");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,8 +115,6 @@ class _MyHomePageState extends State<MyHomePage> {
             builder: (context, AsyncSnapshot<User?> snapshot) {
               if (snapshot.connectionState == ConnectionState.active) {
                 User? user = snapshot.data;
-
-                // Display different icon based on login status
                 return user != null
                     ? IconButton(
                   icon: const Icon(Icons.account_circle),
@@ -142,7 +129,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                 );
               } else {
-                // Return a loading indicator while waiting for auth state
                 return const CircularProgressIndicator();
               }
             },
@@ -153,7 +139,7 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           // First Section
           Container(
-            padding: EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(20.0),
             decoration: BoxDecoration(
               color: Color(0xFFA4C2BA),
               borderRadius: BorderRadius.circular(10.0),
@@ -161,18 +147,18 @@ class _MyHomePageState extends State<MyHomePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   'Share your favorite sit-down spots.',
                   style: TextStyle(fontSize: 24.0, color: Colors.white),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 10.0),
-                Text(
+                const SizedBox(height: 10.0),
+                const Text(
                   'Connect with your friends easily here and outside',
                   style: TextStyle(fontSize: 16.0, color: Colors.white),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 20.0),
+                const SizedBox(height: 20.0),
                 GestureDetector(
                   onTap: () {
                     if (_auth.currentUser != null) {
@@ -182,51 +168,54 @@ class _MyHomePageState extends State<MyHomePage> {
                     }
                   },
                   child: Container(
-                    padding: EdgeInsets.all(40.0),
+                    padding: const EdgeInsets.all(40.0),
                     decoration: BoxDecoration(
-                      color: Color(0xFFF5F5F5),
+                      color: const Color(0xFFF5F5F5),
                       borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.camera_alt),
-                          onPressed: null, // Set onPressed to null to disable the button
-                        ),
-                        SizedBox(width: 10),
-                        Text(
+                        const Text(
                           'Share where are you...',
                           style: TextStyle(fontSize: 18.0),
                         ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.camera_alt),
+                          onPressed: _takePicture,
+                        ),
+                        IconButton(onPressed: (){}, icon: const Icon(Icons.location_on_outlined)),
                       ],
                     ),
                   ),
                 ),
-
-                SizedBox(height: 20.0),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20.0),
-                      decoration: BoxDecoration(
-                        color: Color(0xFF84A59D),
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      child: Text(
-                        'Post',
-                        style: TextStyle(fontSize: 18.0, color: Colors.white),
-                      ),
+                const SizedBox(height: 20.0),
+                GestureDetector(
+                  onTap: _postPicture,
+                  child: Container(
+                    padding: const EdgeInsets.all(20.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF84A59D),
+                      borderRadius: BorderRadius.circular(10.0),
                     ),
-                  ],
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Post',
+                          style: TextStyle(fontSize: 18.0, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
           // Second Section
           Container(
-            padding: EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -236,7 +225,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 const SizedBox(height: 10),
                 StreamBuilder(
-                  stream: _firestore.collection('info').doc(_auth.currentUser?.uid).snapshots(),
+                  stream: _firestore
+                      .collection('info')
+                      .doc(_auth.currentUser?.uid)
+                      .snapshots(),
                   builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
                     if (!snapshot.hasData || !snapshot.data!.exists) {
                       return const CircularProgressIndicator();
@@ -248,13 +240,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     return photoUrl != null && photoUrl.isNotEmpty
                         ? Column(
                       children: [
-                        // Display the photo
                         Image.network(
                           photoUrl,
                           width: 300,
                           height: 300,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
+                          errorBuilder:
+                              (context, error, stackTrace) {
                             return const SizedBox.shrink();
                           },
                         ),
@@ -271,46 +263,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-
-  // Future<void> _addInfoFunction(BuildContext context) async {
-  //   return showModalBottomSheet(
-  //     context: context,
-  //     builder: (_) {
-  //       return GestureDetector(
-  //         onTap: () {},
-  //         behavior: HitTestBehavior.opaque,
-  //         child: InfoWidget(
-  //           addInfo: _addInfo,
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
-  //
-  //
-  // Future<void> _addInfo(Info info) async {
-  //   User? currentUser = _auth.currentUser;
-  //
-  //   if (currentUser != null) {
-  //     await _firestore
-  //         .collection('info')
-  //         .doc(currentUser.uid)
-  //         .collection('userInfo')
-  //         .add({
-  //       'photo': info.photo,
-  //       'location': info.location,
-  //     });
-  //   }
-  //
-  //   setState(() {
-  //     infos.add(info);
-  //   });
-  // }
-
-  Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-  }
-
   _navigateToSignInPage(BuildContext context) {
     Future.delayed(Duration.zero, () {
       Navigator.pushReplacementNamed(context, '/login');
@@ -318,7 +270,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _navigateToProfile(BuildContext context, User user) {
-    // Navigate to a new page with the user's profile information
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -327,6 +278,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+
 
 class AuthScreen extends StatefulWidget {
   final bool isLogin;
@@ -512,9 +464,9 @@ class _AuthScreenState extends State<AuthScreen> {
             ElevatedButton(
               onPressed: _authAction,
               style: ElevatedButton.styleFrom(
-                primary: Color(0xFF84A59D),
+                primary: const Color(0xFF84A59D),
                 onPrimary: Colors.white,
-                minimumSize: Size(double.infinity, 50),
+                minimumSize: const Size(double.infinity, 50),
               ),
               child: Text(widget.isLogin ? "Log In" : "Register"),
             ),
@@ -524,24 +476,24 @@ class _AuthScreenState extends State<AuthScreen> {
                 child: ElevatedButton(
                   onPressed: _navigateToLogin,
                   style: ElevatedButton.styleFrom(
-                    primary: Color(0xFF84A59D),
+                    primary: const Color(0xFF84A59D),
                     onPrimary: Colors.white,
-                    minimumSize: Size(double.infinity, 50),
+                    minimumSize: const Size(double.infinity, 50),
                   ),
                   child: const Text('Already have an account? Login'),
                 ),
               ),
             if (widget.isLogin)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10.0),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 10.0),
               ),
             if (widget.isLogin)
               ElevatedButton(
                 onPressed: _navigateToRegister,
                 style: ElevatedButton.styleFrom(
-                  primary: Color(0xFF84A59D),
+                  primary: const Color(0xFF84A59D),
                   onPrimary: Colors.white,
-                  minimumSize: Size(double.infinity, 50),
+                  minimumSize: const Size(double.infinity, 50),
                 ),
                 child: const Text('Create an account'),
               ),
