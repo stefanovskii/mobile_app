@@ -72,19 +72,19 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       await uploadTask.whenComplete(() async {
         String imageUrl = await storageReference.getDownloadURL();
-        _saveImageToFirestore(imageUrl);
+        await _saveImageToFirestore(imageUrl, DateTime.now());
       });
     } catch (error) {
       print("Error uploading image: $error");
     }
   }
 
-  Future<void> _saveImageToFirestore(String imageUrl) async {
+  Future<void> _saveImageToFirestore(String imageUrl, DateTime uploadTime) async {
     if (_auth.currentUser != null) {
       await _firestore
           .collection('info')
           .doc(_auth.currentUser!.uid)
-          .set({'photo': imageUrl}, SetOptions(merge: true));
+          .set({'photo': imageUrl, 'uploadTime': uploadTime}, SetOptions(merge: true));
     }
   }
 
@@ -224,11 +224,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   style: TextStyle(fontSize: 20.0),
                 ),
                 const SizedBox(height: 10),
-                StreamBuilder(
-                  stream: _firestore
-                      .collection('info')
-                      .doc(_auth.currentUser?.uid)
-                      .snapshots(),
+                StreamBuilder<DocumentSnapshot>(
+                  stream: _firestore.collection('info').doc(_auth.currentUser?.uid).snapshots(),
                   builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
                     if (!snapshot.hasData || !snapshot.data!.exists) {
                       return const CircularProgressIndicator();
@@ -236,23 +233,31 @@ class _MyHomePageState extends State<MyHomePage> {
 
                     var infoData = snapshot.data!.data() as Map<String, dynamic>;
                     var photoUrl = infoData['photo'];
+                    var uploadTime = infoData['uploadTime'];
 
-                    return photoUrl != null && photoUrl.isNotEmpty
-                        ? Column(
-                      children: [
-                        Image.network(
-                          photoUrl,
-                          width: 300,
-                          height: 300,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (context, error, stackTrace) {
-                            return const SizedBox.shrink();
-                          },
-                        ),
-                      ],
-                    )
-                        : const Text('No photos available');
+                    if (photoUrl != null && photoUrl.isNotEmpty && uploadTime != null) {
+                      Duration difference = DateTime.now().difference(uploadTime.toDate());
+
+                      if (difference.inHours < 24) {
+                        return Column(
+                          children: [
+                            Image.network(
+                              photoUrl,
+                              width: 300,
+                              height: 300,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                          ],
+                        );
+                      } else {
+                        return const Text('No photos available');
+                      }
+                    } else {
+                      return const Text('No photos available');
+                    }
                   },
                 ),
               ],

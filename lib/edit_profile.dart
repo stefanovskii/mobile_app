@@ -26,7 +26,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Widget _buildCustomAppBar() {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.3,
+      height: MediaQuery.of(context).size.height * 0.35,
       color: const Color(0xFF84A59D),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -37,8 +37,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               mainAxisAlignment: MainAxisAlignment.center, // Center the content horizontally
               children: [
                 CircleAvatar(
-                  radius: 60.0,
-                  child: Icon(Icons.account_circle, size: 120.0),
+                  radius: 80.0,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.account_circle, size: 160.0),foregroundColor: Colors.black,
                 ),
               ],
             ),
@@ -60,6 +61,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
       appBar: AppBar(
           backgroundColor: const Color(0xFF84A59D),
           automaticallyImplyLeading: false,
+          title: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(left: 60.0),
+                child: Text(
+                  'Profile',
+                  style: TextStyle(color: Colors.white, fontSize: 32.0),
+                ),
+              ),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -78,19 +91,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
               padding: const EdgeInsets.all(16.0),
               child: ListView(
                 children: [
-                  const Text('Edit Profile', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),),
+                  const Text('Edit Profile', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16.0),
-                  TextField(
+                  _buildEditableTextField(
                     controller: _firstNameController,
-                    decoration: const InputDecoration(labelText: "First Name"),
+                    label: "First Name",
                   ),
-                  TextField(
+                  _buildEditableTextField(
                     controller: _lastNameController,
-                    decoration: const InputDecoration(labelText: "Last Name"),
+                    label: "Last Name",
                   ),
-                  TextField(
+                  _buildEditableTextField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: "Email"),
+                    label: "Email",
                   ),
                 ],
               ),
@@ -100,6 +113,59 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ),
     );
   }
+
+  Widget _buildEditableTextField({
+    required TextEditingController controller,
+    required String label,
+    bool enabled = true,
+  }) {
+    final FocusNode focusNode = FocusNode();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: GestureDetector(
+        onTap: () {
+          if (enabled) {
+            // Enable editing and focus on the TextField
+            setState(() {
+              enabled = true;
+            });
+            focusNode.requestFocus();
+          }
+        },
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: label,
+            enabled: enabled,
+            suffixIcon: enabled
+                ? IconButton(
+              icon: Icon(Icons.edit),
+              onPressed: () {
+                setState(() {
+                  enabled = true;
+                });
+                focusNode.requestFocus();
+              },
+            )
+                : null,
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey),
+            ),
+            disabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
 
 
   void _saveChanges(BuildContext context) {
