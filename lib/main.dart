@@ -59,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _uploadImageToFirebaseStorage() async {
-    if (_auth.currentUser == null) {
+    if (_auth.currentUser == null || _selectedImage == null) {
       return;
     }
 
@@ -79,14 +79,16 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+
   Future<void> _saveImageToFirestore(String imageUrl, DateTime uploadTime) async {
     if (_auth.currentUser != null) {
       await _firestore
           .collection('info')
           .doc(_auth.currentUser!.uid)
-          .set({'photo': imageUrl, 'uploadTime': uploadTime}, SetOptions(merge: true));
+          .set({'photo': imageUrl, 'uploadTime': uploadTime ?? DateTime.now()}, SetOptions(merge: true));
     }
   }
+
 
   void _postPicture() {
     if (_selectedImage != null) {
@@ -469,8 +471,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ElevatedButton(
               onPressed: _authAction,
               style: ElevatedButton.styleFrom(
-                primary: const Color(0xFF84A59D),
-                onPrimary: Colors.white,
+                foregroundColor: Colors.white, backgroundColor: const Color(0xFF84A59D),
                 minimumSize: const Size(double.infinity, 50),
               ),
               child: Text(widget.isLogin ? "Log In" : "Register"),
@@ -481,8 +482,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 child: ElevatedButton(
                   onPressed: _navigateToLogin,
                   style: ElevatedButton.styleFrom(
-                    primary: const Color(0xFF84A59D),
-                    onPrimary: Colors.white,
+                    foregroundColor: Colors.white, backgroundColor: const Color(0xFF84A59D),
                     minimumSize: const Size(double.infinity, 50),
                   ),
                   child: const Text('Already have an account? Login'),
@@ -496,8 +496,7 @@ class _AuthScreenState extends State<AuthScreen> {
               ElevatedButton(
                 onPressed: _navigateToRegister,
                 style: ElevatedButton.styleFrom(
-                  primary: const Color(0xFF84A59D),
-                  onPrimary: Colors.white,
+                  foregroundColor: Colors.white, backgroundColor: const Color(0xFF84A59D),
                   minimumSize: const Size(double.infinity, 50),
                 ),
                 child: const Text('Create an account'),

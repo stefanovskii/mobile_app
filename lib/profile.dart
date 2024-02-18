@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'edit_profile.dart';
@@ -98,12 +99,53 @@ class _ProfilePageState extends State<ProfilePage> {
 
 
         body: Column(
-        children: [
-          _buildCustomAppBar(),
-          Container(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildCustomAppBar(),
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance.collection('info').doc(widget.user.uid).snapshots(),
+              builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return const CircularProgressIndicator();
+                }
 
-            ),
-          ],
+                var infoData = snapshot.data!.data() as Map<String, dynamic>;
+                var photoUrl = infoData['photo'];
+                var uploadTime = infoData['uploadTime'];
+
+                if (photoUrl != null && photoUrl.isNotEmpty && uploadTime != null) {
+                  return Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(15.0),
+                          child: Image.network(
+                            photoUrl,
+                            width: 300,
+                            height: 300,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Last Upload Time: ${uploadTime.toDate().toString()}',
+                          style: const TextStyle(fontSize: 16.0),
+                        ),
+                      ],
+                    ),
+                  );
+              } else {
+                return const Text('No photos available');
+              }
+            },
+          ),
+        ],
         )
     );
   }
