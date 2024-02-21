@@ -7,6 +7,7 @@ import 'profile.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'map_widget.dart';
 
 import 'firebase_options.dart';
 
@@ -41,6 +42,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   File? _selectedImage;
+  String _selectedLocation = '';
 
   void _takePicture() async {
     final imagePicker = ImagePicker();
@@ -59,7 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _uploadImageToFirebaseStorage() async {
-    if (_auth.currentUser == null || _selectedImage == null) {
+    if (_auth.currentUser == null || _selectedImage == null || _selectedLocation.isEmpty) {
       return;
     }
 
@@ -72,7 +74,7 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       await uploadTask.whenComplete(() async {
         String imageUrl = await storageReference.getDownloadURL();
-        await _saveImageToFirestore(imageUrl, DateTime.now());
+        await _saveDataToFirestore(imageUrl, DateTime.now());
       });
     } catch (error) {
       print("Error uploading image: $error");
@@ -80,14 +82,20 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
 
-  Future<void> _saveImageToFirestore(String imageUrl, DateTime uploadTime) async {
+
+  Future<void> _saveDataToFirestore(String imageUrl, DateTime uploadTime) async {
     if (_auth.currentUser != null) {
       await _firestore
           .collection('info')
           .doc(_auth.currentUser!.uid)
-          .set({'photo': imageUrl, 'uploadTime': uploadTime ?? DateTime.now()}, SetOptions(merge: true));
+          .set({
+        'photo': imageUrl,
+        'location': _selectedLocation,  // Add this line to save the location
+        'uploadTime': uploadTime ?? DateTime.now(),
+      }, SetOptions(merge: true));
     }
   }
+
 
 
   void _postPicture() {
@@ -142,8 +150,9 @@ class _MyHomePageState extends State<MyHomePage> {
           // First Section
           Container(
             padding: const EdgeInsets.all(20.0),
+            margin: const EdgeInsets.only(left: 5.0, right: 5.0),
             decoration: BoxDecoration(
-              color: Color(0xFFA4C2BA),
+              color: const Color(0xFFA4C2BA),
               borderRadius: BorderRadius.circular(10.0),
             ),
             child: Column(
@@ -154,13 +163,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   style: TextStyle(fontSize: 24.0, color: Colors.white),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 10.0),
+                const SizedBox(height: 5.0),
                 const Text(
                   'Connect with your friends easily here and outside',
-                  style: TextStyle(fontSize: 16.0, color: Colors.white),
+                  style: TextStyle(fontSize: 15.0, color: Colors.white),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20.0),
+                const SizedBox(height: 15.0),
                 GestureDetector(
                   onTap: () {
                     if (_auth.currentUser != null) {
@@ -170,36 +179,55 @@ class _MyHomePageState extends State<MyHomePage> {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(40.0),
+                    padding: const EdgeInsets.all(20.0),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(20.0),
                     ),
-                    child: Row(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text(
                           'Share where are you...',
                           style: TextStyle(fontSize: 18.0),
                         ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.camera_alt),
-                          onPressed: _takePicture,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.camera_alt_outlined),
+                              onPressed: _takePicture,
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => OSMHome(
+                                    onLocationPicked: (location) {
+                                      setState(() {
+                                        _selectedLocation = location;
+                                      });
+                                    },
+                                  )),
+                                );
+                              },
+                              icon: const Icon(Icons.location_on_outlined),
+                            ),
+                          ],
                         ),
-                        IconButton(onPressed: (){}, icon: const Icon(Icons.location_on_outlined)),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0),
+                const SizedBox(height: 15.0),
                 GestureDetector(
                   onTap: _postPicture,
                   child: Container(
-                    padding: const EdgeInsets.all(20.0),
+                    padding: const EdgeInsets.only(bottom:10.0, top: 10.0, left: 15.0, right: 15.0),
+                    margin: const EdgeInsets.only(left: 293.0),
                     decoration: BoxDecoration(
                       color: const Color(0xFF84A59D),
-                      borderRadius: BorderRadius.circular(10.0),
+                      borderRadius: BorderRadius.circular(15.0),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -223,7 +251,7 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 const Text(
                   'Friends spots',
-                  style: TextStyle(fontSize: 20.0),
+                  style: TextStyle(fontSize: 22.0, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 StreamBuilder<DocumentSnapshot>(
@@ -235,6 +263,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                     var infoData = snapshot.data!.data() as Map<String, dynamic>;
                     var photoUrl = infoData['photo'];
+                    var location = infoData['location'];
                     var uploadTime = infoData['uploadTime'];
 
                     if (photoUrl != null && photoUrl.isNotEmpty && uploadTime != null) {
@@ -243,14 +272,22 @@ class _MyHomePageState extends State<MyHomePage> {
                       if (difference.inHours < 24) {
                         return Column(
                           children: [
-                            Image.network(
-                              photoUrl,
-                              width: 300,
-                              height: 300,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const SizedBox.shrink();
-                              },
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(15.0),
+                              child: Image.network(
+                                photoUrl,
+                                width: 300,
+                                height: 300,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              '$location',
+                              style: TextStyle(fontSize: 12.0),textAlign: TextAlign.center,
                             ),
                           ],
                         );
