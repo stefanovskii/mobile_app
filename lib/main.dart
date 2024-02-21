@@ -339,6 +339,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
+  bool _isPasswordHidden = true;
 
   final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
   GlobalKey<ScaffoldMessengerState>();
@@ -459,7 +460,7 @@ class _AuthScreenState extends State<AuthScreen> {
             const SizedBox(height: 10),
             TextField(
               controller: _passwordController,
-              obscureText: true,
+              obscureText: _isPasswordHidden,
               decoration: InputDecoration(
                 labelText: "Password",
                 filled: true,
@@ -467,6 +468,19 @@ class _AuthScreenState extends State<AuthScreen> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8.0),
                   borderSide: BorderSide.none,
+                ),
+                suffixIcon: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordHidden = !_isPasswordHidden;
+                    });
+                  },
+                  child: Text(
+                    _isPasswordHidden ? "Show" : "Hide",
+                    style: const TextStyle(
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -501,7 +515,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 ],
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             const Padding(
               padding: EdgeInsets.only(bottom: 70.0),
             ),

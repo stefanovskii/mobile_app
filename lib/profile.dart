@@ -97,11 +97,11 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
 
-
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildCustomAppBar(),
+            const SizedBox(height: 20),
             StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance.collection('info').doc(widget.user.uid).snapshots(),
               builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
