@@ -7,11 +7,12 @@ The app is about Soical interactions between the users.
 <h2>Login/Register Page</h2>
 ![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Login_Register_Page.png)
 
-<h2>Home screen</h2>
+## Home screen
 After logging in the main page is shown and there you can add the location and take a photo of where are you at.
 ![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Main_Page.png)
 
 The camera opens up after clicking the camera icon
+<br>
 ![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Camera_Page.png)
 and also on the location icon, the map opens up for choosing the place where you sit
 ![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Location_Page.png).
