@@ -7,14 +7,20 @@ The app is about Soical interactions between the users.
 <h2>Login/Register Page</h2>
 ![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Login_Register_Page.png)
 
+<h2>Home screen</h2>
+After logging in the main page is shown and there you can add the location and take a photo of where are you at.
+![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Main_Page.png)
 
-This project is a starting point for a Flutter application.
+The camera opens up after clicking the camera icon
+![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Camera_Page.png)
+and also on the location icon, the map opens up for choosing the place where you sit
+![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Location_Page.png).
+Only when the two of them are chosen you can post it on the feed.
 
-A few resources to get you started if this is your first Flutter project:
+<h2>Profile page</h2>
+In the top right there is a clickable icon for the Profile page where you can see the latest post and the date of it.
+![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Profile_Page.png)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+<h2>Edit page</h2>
+In the top left of the Profile page there is an "Edit" button where edit page opens up and you can edit the data about the user
+![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Edit_Page.png)
