@@ -5,7 +5,7 @@ A new Flutter project.
 The app is about Soical interactions between the users.
 
 <h2>Login/Register Page</h2>
-![alt text]([assets/Login_Register_Page.png](https://github.com/stefanovskii/mobile_app/blob/master/assets/Login_Register_Page.png))
+![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Login_Register_Page.png)
 
 
 This project is a starting point for a Flutter application.
