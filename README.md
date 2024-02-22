@@ -26,5 +26,5 @@ In the top right there is a clickable icon for the Profile page where you can se
 ![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Profile_Page.png)
 
 ## Edit page
-In the top left of the Profile page there is an "Edit" button where edit page opens up and you can edit the data about the user
+In the top left of the Profile page there is an "Edit" button where edit page opens up and you can edit the data about the user.
 ![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Edit_Page.png)
