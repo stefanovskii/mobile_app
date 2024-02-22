@@ -17,7 +17,8 @@ The camera opens up after clicking the camera icon
 <br>
 and also on the location icon, the map opens up for choosing the place where you sit
 <br>
-![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Location_Page.png).
+![alt text](https://github.com/stefanovskii/mobile_app/blob/master/assets/Location_Page.png)
+<br>
 Only when the two of them are chosen you can post it on the feed.
 
 ## Profile page
