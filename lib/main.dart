@@ -3,37 +3,49 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'profile.dart';
+import 'package:project/Screens/Profile/auth_screen.dart';
+import 'package:project/Themes/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'map_widget.dart';
-
+import 'package:project/Widgets/custom_drawer.dart';
+import 'package:project/Widgets/map_widget.dart';
 import 'firebase_options.dart';
+import 'package:project/Screens/Notifications/notifications_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final ValueNotifier<bool> _darkModeNotifier = ValueNotifier<bool>(false);
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      initialRoute: '/',
-      routes: {
-        '/': (context) => MyHomePage(),
-        '/login': (context) => const AuthScreen(isLogin: true),
-        '/register': (context) => const AuthScreen(isLogin: false),
+    return ValueListenableBuilder<bool>(
+      valueListenable: _darkModeNotifier,
+      builder: (context, isDarkMode, child) {
+        return MaterialApp(
+          theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+          initialRoute: '/',
+          routes: {
+            '/': (context) => MyHomePage(darkModeNotifier: _darkModeNotifier),
+            '/login': (context) => const AuthScreen(isLogin: true),
+            '/register': (context) => const AuthScreen(isLogin: false),
+          },
+        );
       },
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
+  final ValueNotifier<bool> darkModeNotifier;
+
+  MyHomePage({required this.darkModeNotifier});
+
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -43,6 +55,40 @@ class _MyHomePageState extends State<MyHomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   File? _selectedImage;
   String _selectedLocation = '';
+
+  Future<List<QueryDocumentSnapshot>> _fetchConnectedUsersPosts() async {
+    if (_auth.currentUser == null) {
+      return [];
+    }
+
+    // Fetch the current user's connected users (emails)
+    DocumentSnapshot userDoc = await _firestore.collection('users').doc(_auth.currentUser!.uid).get();
+    List<dynamic> connectedEmails = userDoc['connected_users'] ?? [];
+
+    if (connectedEmails.isEmpty) {
+      return []; // Return an empty list if there are no connected users
+    }
+
+    // Fetch UIDs for connected emails
+    QuerySnapshot usersSnapshot = await _firestore
+        .collection('users')
+        .where('email', whereIn: connectedEmails)
+        .get();
+
+    List<String> connectedUids = usersSnapshot.docs.map((doc) => doc.id).toList();
+
+    if (connectedUids.isEmpty) {
+      return []; // Return an empty list if there are no connected UIDs
+    }
+
+    // Fetch posts from the connected users (by UID)
+    QuerySnapshot postsSnapshot = await _firestore
+        .collection('info')
+        .where(FieldPath.documentId, whereIn: connectedUids)
+        .get();
+
+    return postsSnapshot.docs;
+  }
 
   void _takePicture() async {
     final imagePicker = ImagePicker();
@@ -81,8 +127,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-
-
   Future<void> _saveDataToFirestore(String imageUrl, DateTime uploadTime) async {
     if (_auth.currentUser != null) {
       await _firestore
@@ -90,13 +134,12 @@ class _MyHomePageState extends State<MyHomePage> {
           .doc(_auth.currentUser!.uid)
           .set({
         'photo': imageUrl,
-        'location': _selectedLocation,  // Add this line to save the location
+        'location': _selectedLocation,
         'uploadTime': uploadTime ?? DateTime.now(),
       }, SetOptions(merge: true));
+
     }
   }
-
-
 
   void _postPicture() {
     if (_selectedImage != null) {
@@ -106,20 +149,17 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void _openProfileDrawer(BuildContext context) {
+    Scaffold.of(context).openDrawer();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        title: Text('Main Screen'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {
-              // Add your notification icon onPressed logic here
-            },
-          ),
-          // Login Button
-          Spacer(),
           StreamBuilder(
             stream: _auth.authStateChanges(),
             builder: (context, AsyncSnapshot<User?> snapshot) {
@@ -129,7 +169,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ? IconButton(
                   icon: const Icon(Icons.account_circle),
                   onPressed: () {
-                    _navigateToProfile(context, user);
+                    _openProfileDrawer(context);
                   },
                 )
                     : IconButton(
@@ -143,8 +183,16 @@ class _MyHomePageState extends State<MyHomePage> {
               }
             },
           ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => NotificationsScreen()));
+            },
+          ),
         ],
       ),
+      drawer: CustomDrawer(darkModeNotifier: widget.darkModeNotifier),
       body: Column(
         children: [
           // First Section
@@ -152,7 +200,7 @@ class _MyHomePageState extends State<MyHomePage> {
             padding: const EdgeInsets.all(20.0),
             margin: const EdgeInsets.only(left: 5.0, right: 5.0),
             decoration: BoxDecoration(
-              color: const Color(0xFFA4C2BA),
+              color: AppColors.secondaryColor,
               borderRadius: BorderRadius.circular(10.0),
             ),
             child: Column(
@@ -202,13 +250,14 @@ class _MyHomePageState extends State<MyHomePage> {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => OSMHome(
-                                    onLocationPicked: (location) {
-                                      setState(() {
-                                        _selectedLocation = location;
-                                      });
-                                    },
-                                  )),
+                                  MaterialPageRoute(
+                                      builder: (context) => OSMHome(
+                                        onLocationPicked: (location) {
+                                          setState(() {
+                                            _selectedLocation = location;
+                                          });
+                                        },
+                                      )),
                                 );
                               },
                               icon: const Icon(Icons.location_on_outlined),
@@ -223,10 +272,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 GestureDetector(
                   onTap: _postPicture,
                   child: Container(
-                    padding: const EdgeInsets.only(bottom:10.0, top: 10.0, left: 15.0, right: 15.0),
+                    padding: const EdgeInsets.only(
+                        bottom: 10.0, top: 10.0, left: 15.0, right: 15.0),
                     margin: const EdgeInsets.only(left: 293.0),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF84A59D),
+                      color: AppColors.primaryColor,
                       borderRadius: BorderRadius.circular(15.0),
                     ),
                     child: const Row(
@@ -253,50 +303,82 @@ class _MyHomePageState extends State<MyHomePage> {
                   'Friends spots',
                   style: TextStyle(fontSize: 22.0, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 10),
-                StreamBuilder<DocumentSnapshot>(
-                  stream: _firestore.collection('info').doc(_auth.currentUser?.uid).snapshots(),
-                  builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-                    if (!snapshot.hasData || !snapshot.data!.exists) {
+                const SizedBox(height: 30),
+                FutureBuilder<List<QueryDocumentSnapshot>>(
+                  future: _fetchConnectedUsersPosts(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return const CircularProgressIndicator();
                     }
 
-                    var infoData = snapshot.data!.data() as Map<String, dynamic>;
-                    var photoUrl = infoData['photo'];
-                    var location = infoData['location'];
-                    var uploadTime = infoData['uploadTime'];
-
-                    if (photoUrl != null && photoUrl.isNotEmpty && uploadTime != null) {
-                      Duration difference = DateTime.now().difference(uploadTime.toDate());
-
-                      if (difference.inHours < 24) {
-                        return Column(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(15.0),
-                              child: Image.network(
-                                photoUrl,
-                                width: 300,
-                                height: 300,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const SizedBox.shrink();
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              '$location',
-                              style: TextStyle(fontSize: 12.0),textAlign: TextAlign.center,
-                            ),
-                          ],
-                        );
-                      } else {
-                        return const Text('No photos available');
-                      }
-                    } else {
-                      return const Text('No photos available');
+                    if (snapshot.hasError) {
+                      return const Text('Your Friends have no posts.');
                     }
+
+                    // Get the list of documents fetched by _fetchConnectedUsersPosts
+                    var docs = snapshot.data!;
+
+                    // Filter documents to show only those uploaded in the last 24 hours
+                    var recentDocs = docs.where((doc) {
+                      var data = doc.data() as Map<String, dynamic>;
+                      var uploadTime = data['uploadTime']?.toDate();
+                      if (uploadTime == null) return false;
+
+                      Duration difference = DateTime.now().difference(uploadTime);
+                      return difference.inHours <= 24;
+                    }).toList();
+
+                    if (recentDocs.isEmpty) {
+                      return const Text('Your Friends have no posts.');
+                    }
+
+                    return SizedBox(
+                      height: 300, // Set the height of the container to match the height of your images
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal, // Set the scroll direction to horizontal
+                        itemCount: recentDocs.length,
+                        itemBuilder: (context, index) {
+                          var doc = recentDocs[index];
+                          var data = doc.data() as Map<String, dynamic>;
+                          var photoUrl = data['photo'];
+                          var location = data['location'];
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 5.0), // Add some horizontal spacing between cards
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min, // Ensures the column takes up only as much vertical space as its children
+                              crossAxisAlignment: CrossAxisAlignment.center, // Centers children horizontally
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(15.0), // Optional: for rounded corners
+                                  child: Image.network(
+                                    photoUrl,
+                                    width: 200, // Set desired width
+                                    height: 200, // Set desired height
+                                    fit: BoxFit.cover, // Use BoxFit.cover to maintain aspect ratio and fill the area
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const SizedBox.shrink(); // Handle image load errors gracefully
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 10), // Add space between image and text
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 250, // Matches the width of the image
+                                  ),
+                                  child: Text(
+                                      location ?? 'No location available',
+                                      style: const TextStyle(fontSize: 12.0),
+                                      textAlign: TextAlign.center, // Center text alignment
+                                      softWrap: true
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    );
                   },
                 ),
               ],
@@ -307,258 +389,12 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  _navigateToSignInPage(BuildContext context) {
-    Future.delayed(Duration.zero, () {
-      Navigator.pushReplacementNamed(context, '/login');
-    });
-  }
-
-  void _navigateToProfile(BuildContext context, User user) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProfilePage(user: user),
-      ),
-    );
+  void _navigateToSignInPage(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => AuthScreen(isLogin: true)));
   }
 }
 
 
-class AuthScreen extends StatefulWidget {
-  final bool isLogin;
 
-  const AuthScreen({super.key, required this.isLogin});
 
-  @override
-  State<AuthScreen> createState() => _AuthScreenState();
-}
 
-class _AuthScreenState extends State<AuthScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
-  bool _isPasswordHidden = true;
-
-  final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
-  GlobalKey<ScaffoldMessengerState>();
-
-  Future<void> _authAction() async {
-    try {
-      if (widget.isLogin) {
-        // Login logic
-        await _auth.signInWithEmailAndPassword(
-          email: _emailController.text,
-          password: _passwordController.text,
-        );
-        _showSuccessDialog(
-            "Login Successful", "You have successfully logged in!");
-        _navigateToHome();
-      } else {
-        // Registration logic
-        await _auth.createUserWithEmailAndPassword(
-          email: _emailController.text,
-          password: _passwordController.text,
-        );
-
-        // Additional registration logic
-        User? user = _auth.currentUser;
-        if (user != null) {
-          await user.updateProfile(
-              displayName:
-              "${_firstNameController.text} ${_lastNameController.text}");
-        }
-
-        _showSuccessDialog(
-            "Registration Successful", "You have successfully registered!");
-        _navigateToLogin();
-      }
-    } catch (e) {
-      _showErrorDialog(
-          "Authentication Error", "Error during authentication: $e");
-    }
-  }
-
-  void _showSuccessDialog(String title, String message) {
-    _scaffoldKey.currentState?.showSnackBar(SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 2),
-    ));
-  }
-
-  void _showErrorDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _navigateToHome() {
-    Future.delayed(Duration.zero, () {
-      Navigator.pushReplacementNamed(context, '/');
-    });
-  }
-
-  void _navigateToLogin() {
-    Future.delayed(Duration.zero, () {
-      Navigator.pushReplacementNamed(context, '/login');
-    });
-  }
-
-  void _navigateToRegister() {
-    Future.delayed(Duration.zero, () {
-      Navigator.pushReplacementNamed(context, '/register');
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (widget.isLogin)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 100.0),
-                child: Text(
-                  "On The Spot",
-                  style: TextStyle(
-                    color: Color(0xFF84A59D),
-                    fontSize: 55.0,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: "Email",
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _passwordController,
-              obscureText: _isPasswordHidden,
-              decoration: InputDecoration(
-                labelText: "Password",
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide.none,
-                ),
-                suffixIcon: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordHidden = !_isPasswordHidden;
-                    });
-                  },
-                  child: Text(
-                    _isPasswordHidden ? "Show" : "Hide",
-                    style: const TextStyle(
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (!widget.isLogin)
-              Column(
-                children: [
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _firstNameController,
-                    decoration: InputDecoration(
-                      labelText: "First Name",
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _lastNameController,
-                    decoration: InputDecoration(
-                      labelText: "Last Name",
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 10),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 70.0),
-            ),
-            ElevatedButton(
-              onPressed: _authAction,
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white, backgroundColor: const Color(0xFF84A59D),
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: Text(widget.isLogin ? "Log In" : "Register"),
-            ),
-            if (!widget.isLogin)
-              Padding(
-                padding: const EdgeInsets.only(top: 10.0),
-                child: ElevatedButton(
-                  onPressed: _navigateToLogin,
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white, backgroundColor: const Color(0xFF84A59D),
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: const Text('Already have an account? Login'),
-                ),
-              ),
-            if (widget.isLogin)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 10.0),
-              ),
-            if (widget.isLogin)
-              ElevatedButton(
-                onPressed: _navigateToRegister,
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white, backgroundColor: const Color(0xFF84A59D),
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text('Create an account'),
-              ),
-            TextButton(
-              onPressed: _navigateToHome,
-              child: const Text('Back to Main Screen'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
