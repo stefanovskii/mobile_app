@@ -5,12 +5,7 @@ class EditableTextField extends StatelessWidget {
   final String label;
   final bool enabled;
 
-  const EditableTextField({
-    Key? key,
-    required this.controller,
-    required this.label,
-    this.enabled = true,
-  }) : super(key: key);
+  const EditableTextField({Key? key, required this.controller, required this.label, this.enabled = true,}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

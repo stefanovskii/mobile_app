@@ -1,6 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project/Models/user_model.dart';
+import 'package:project/Services/profiles_service.dart';
 import 'package:project/Widgets/custom_app_bar.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -13,92 +14,160 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF84A59D),
-        automaticallyImplyLeading: false,
-        leading: TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: const Text(
-            'Back',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-        flexibleSpace: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Padding(
-              padding: EdgeInsets.only(top: 50.0),
-              child: Text(
-                'Profile',
-                style: TextStyle(color: Colors.white, fontSize: 32.0),
-              ),
-            ),
-          ],
-        ),
-      ),
+  final ProfilesService _profilesService = ProfilesService();
 
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+  Future<Map<String, dynamic>> _fetchUserProfileAndConnectedUsers() {
+    return _profilesService.fetchUserProfileAndConnectedUsers(widget.user);
+  }
+
+  Widget _buildConnectedUserCard(String username) {
+    return Container(
+      width: 100,
+      margin: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Column(
         children: [
-          CustomAppBar(user: widget.user),
-          const SizedBox(height: 20),
-          StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance.collection('info').doc(widget.user.uid).snapshots(),
-            builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator();
-              }
-
-              if (!snapshot.hasData || !snapshot.data!.exists) {
-                return const Text('No photo taken in the last 24h.');
-              }
-
-              var infoData = snapshot.data!.data() as Map<String, dynamic>?;
-              var photoUrl = infoData?['photo'];
-              var uploadTime = infoData?['uploadTime'];
-
-              return Container(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 10),
-                    photoUrl != null && photoUrl.isNotEmpty
-                        ? ClipRRect(
-                      borderRadius: BorderRadius.circular(15.0),
-                      child: Image.network(
-                        photoUrl,
-                        width: 300,
-                        height: 300,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    )
-                        : const Text('No photo taken in the last 24h.'),
-                    const SizedBox(height: 10),
-                    uploadTime != null
-                        ? Text(
-                      'Last Upload Time: ${uploadTime.toDate().toString()}',
-                      style: const TextStyle(fontSize: 16.0),
-                    )
-                        : const Text('No upload time available'),
-                  ],
-                ),
-              );
-            },
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.blueGrey,
+            child: Text(
+              username[0].toUpperCase(),
+              style: const TextStyle(color: Colors.white, fontSize: 24),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            username,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
+  Widget _buildLatestPost(UserModel userProfile) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(15),
+              topRight: Radius.circular(15),
+            ),
+            child: userProfile.photoUrl != null && userProfile.photoUrl!.isNotEmpty
+                ? Image.network(
+              userProfile.photoUrl!,
+              width: double.infinity,
+              height: 250,
+              fit: BoxFit.cover,
+            )
+                : const Icon(Icons.photo, size: 100, color: Colors.grey),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Location: ${userProfile.location ?? "Unknown"}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Last Upload: ${userProfile.uploadTime?.toString() ?? "No upload time available"}',
+                  style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF84A59D),
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          'Profile',
+          style: TextStyle(color: Colors.black, fontSize: 28),
+        ),
+        centerTitle: true,
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _fetchUserProfileAndConnectedUsers(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
+          if (snapshot.hasError || !snapshot.hasData) {
+            return const Center(child: Text('Error loading profile data.'));
+          }
+
+          UserModel? userProfile = snapshot.data?['userProfile'];
+          List<String>? connectedUsernames = List<String>.from(snapshot.data?['connectedUsernames'] ?? []);
+
+          if (userProfile == null) {
+            return const Center(child: Text('User profile not found.'));
+          }
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CustomAppBar(userModel: userProfile),
+                const SizedBox(height: 20),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Connected Users',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                connectedUsernames.isNotEmpty
+                    ? SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: connectedUsernames.length,
+                    itemBuilder: (context, index) {
+                      return _buildConnectedUserCard(connectedUsernames[index]);
+                    },
+                  ),
+                )
+                    : const Center(child: Text('No connected users yet.')),
+
+                const SizedBox(height: 20),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Latest Post',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _buildLatestPost(userProfile),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

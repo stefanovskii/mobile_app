@@ -1,42 +1,114 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:project/Models/notification.dart';
+import 'package:project/Services/notifications_service.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
+  @override
+  _NotificationsScreenState createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final NotificationsService notificationsService = NotificationsService();
+  String? username;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUsername();
+  }
+
+  Future<void> _fetchUsername() async {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      String? fetchedUsername = await notificationsService.getUsernameForCurrentUser(currentUser.uid);
+      setState(() {
+        username = fetchedUsername;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    User? currentUser = FirebaseAuth.instance.currentUser;
-
     return Scaffold(
-      appBar: AppBar(title: Text('Notifications')),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance
-            .collection('notifications')
-            .where('to', isEqualTo: currentUser?.email)
-            .snapshots(),
-        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          'Notifications',
+          style: TextStyle(color: Colors.black, fontSize: 28),
+        ),
+        centerTitle: true,
+      ),
+      body: FutureBuilder<List<NotificationModel>>(
+        future: notificationsService.fetchNotificationsForUser(username ?? ''),
+        builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
-          final notifications = snapshot.data?.docs ?? [];
+          final notifications = snapshot.data ?? [];
+
+          if (notifications.isEmpty) {
+            return const Center(
+              child: Text(
+                'No notifications yet!',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            );
+          }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(8.0),
             itemCount: notifications.length,
             itemBuilder: (context, index) {
               final notification = notifications[index];
-              final String message = notification['message'];
-              final String type = notification['type'];
-              final String fromEmail = notification['from'];
+              final String message = notification.message ?? '';
+              final String type = notification.type ?? '';
+              final String fromEmail = notification.from ?? '';
+              final String toEmail = notification.to ?? '';
 
-              return ListTile(
-                title: Text(message),
-                trailing: type == 'connection_request'
-                    ? ElevatedButton(
-                  onPressed: () => _acceptConnectionRequest(fromEmail),
-                  child: Text('Accept'),
-                )
-                    : null,
+              return Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 4,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  title: Text(
+                    message,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  trailing: type == 'connection_request'
+                      ? ElevatedButton(
+                    onPressed: () {
+                      notificationsService.acceptConnectionRequest(
+                        fromEmail,
+                        toEmail,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text(
+                      'Accept',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  )
+                      : null,
+                ),
               );
             },
           );
@@ -45,68 +117,4 @@ class NotificationsScreen extends StatelessWidget {
     );
   }
 
-  void _acceptConnectionRequest(String fromEmail) async {
-    User? currentUser = FirebaseAuth.instance.currentUser;
-
-    if (currentUser == null) return;
-
-    // Update the connection request status
-    final requestSnapshot = await FirebaseFirestore.instance
-        .collection('connection_requests')
-        .where('from', isEqualTo: fromEmail)
-        .where('to', isEqualTo: currentUser.email)
-        .get();
-
-    if (requestSnapshot.docs.isNotEmpty) {
-      final requestDoc = requestSnapshot.docs.first;
-      await requestDoc.reference.update({'status': 'accepted'});
-    }
-
-    // Fetch the 'to' user's document
-    final toUserSnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: currentUser.email)
-        .get();
-
-    if (toUserSnapshot.docs.isNotEmpty) {
-      final toUserDoc = toUserSnapshot.docs.first;
-      // Add 'fromEmail' to the 'to' user's 'connected_users'
-      await toUserDoc.reference.update({
-        'connected_users': FieldValue.arrayUnion([fromEmail]),
-      });
-    }
-
-    // Fetch the 'from' user's document
-    final fromUserSnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: fromEmail)
-        .get();
-
-    if (fromUserSnapshot.docs.isNotEmpty) {
-      final fromUserDoc = fromUserSnapshot.docs.first;
-      // Add current user's email to the 'from' user's 'connected_users'
-      await fromUserDoc.reference.update({
-        'connected_users': FieldValue.arrayUnion([currentUser.email]),
-      });
-    }
-
-    // Delete the notification
-    final notificationSnapshot = await FirebaseFirestore.instance
-        .collection('notifications')
-        .where('to', isEqualTo: currentUser.email)
-        .where('from', isEqualTo: fromEmail)
-        .get();
-
-    if (notificationSnapshot.docs.isNotEmpty) {
-      final notificationDoc = notificationSnapshot.docs.first;
-      await notificationDoc.reference.delete();
-    }
-
-    // Optionally: Send a notification that the request was accepted
-    await FirebaseFirestore.instance.collection('notifications').add({
-      'to': fromEmail,
-      'message': '${currentUser.displayName} accepted your connection request.',
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-  }
 }

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:project/Models/user_model.dart';
 
 class CustomAppBar extends StatelessWidget {
-  final User user;
+  final UserModel userModel;
 
-  const CustomAppBar({Key? key, required this.user}) : super(key: key);
+  const CustomAppBar({Key? key, required this.userModel}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.35,
+      height: MediaQuery.of(context).size.height * 0.25,
       color: const Color(0xFF84A59D),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -20,17 +20,17 @@ class CustomAppBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CircleAvatar(
-                  radius: 80.0,
+                  radius: 60.0,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.account_circle, size: 160.0),
+                  child: Icon(Icons.account_circle, size: 120.0, color: Colors.black,)
                 ),
               ],
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 10.0),
             Text(
-              user.displayName ?? 'No Name',
+              '${userModel.firstName ?? 'No'} ${userModel.lastName ?? 'Name'}',
               style: const TextStyle(
-                fontSize: 35.0,
+                fontSize: 30.0,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),

@@ -24,7 +24,7 @@ class _OSMHomeState extends State<OSMHome> {
         color: Colors.red,
         child: Center(
             child: OpenStreetMapSearchAndPick(
-                center: LatLong(41.9973, 21.4270),
+                center: const LatLong(41.9973, 21.4270),
                 buttonColor: Colors.blue,
                 buttonText: 'Set Current Location',
                 onPicked: (pickedData) {

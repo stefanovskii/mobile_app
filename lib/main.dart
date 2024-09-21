@@ -1,13 +1,19 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:project/Screens/Profile/auth_screen.dart';
-import 'package:project/Themes/app_colors.dart';
+import 'package:project/Models/user_model.dart';
+import 'package:project/Screens/AuthScreens/login_screen.dart';
+import 'package:project/Screens/AuthScreens/register_screen.dart';
+import 'package:project/Screens/Profile/search_profiles.dart';
+import 'package:project/Services/auth_service.dart';
+import 'package:project/Constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:project/Services/profiles_service.dart';
 import 'package:project/Widgets/custom_drawer.dart';
 import 'package:project/Widgets/map_widget.dart';
 import 'firebase_options.dart';
@@ -32,8 +38,10 @@ class MyApp extends StatelessWidget {
           initialRoute: '/',
           routes: {
             '/': (context) => MyHomePage(darkModeNotifier: _darkModeNotifier),
-            '/login': (context) => const AuthScreen(isLogin: true),
-            '/register': (context) => const AuthScreen(isLogin: false),
+            '/login': (context) => const LoginScreen(),
+            '/register': (context) => const RegisterScreen(),
+            '/notifications': (context) => NotificationsScreen(),
+            '/searchProfiles': (context) => SearchProfilesScreen(),
           },
         );
       },
@@ -51,43 +59,20 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final AuthService _authService = AuthService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProfilesService _profilesService = ProfilesService();
   File? _selectedImage;
   String _selectedLocation = '';
+  List<String> favorites = [];
 
-  Future<List<QueryDocumentSnapshot>> _fetchConnectedUsersPosts() async {
-    if (_auth.currentUser == null) {
-      return [];
+  Stream<List<UserModel>> _fetchConnectedUsersPostsAsStream() {
+    if (!_authService.isLoggedIn()) {
+      return Stream.value([]);
     }
 
-    // Fetch the current user's connected users (emails)
-    DocumentSnapshot userDoc = await _firestore.collection('users').doc(_auth.currentUser!.uid).get();
-    List<dynamic> connectedEmails = userDoc['connected_users'] ?? [];
-
-    if (connectedEmails.isEmpty) {
-      return []; // Return an empty list if there are no connected users
-    }
-
-    // Fetch UIDs for connected emails
-    QuerySnapshot usersSnapshot = await _firestore
-        .collection('users')
-        .where('email', whereIn: connectedEmails)
-        .get();
-
-    List<String> connectedUids = usersSnapshot.docs.map((doc) => doc.id).toList();
-
-    if (connectedUids.isEmpty) {
-      return []; // Return an empty list if there are no connected UIDs
-    }
-
-    // Fetch posts from the connected users (by UID)
-    QuerySnapshot postsSnapshot = await _firestore
-        .collection('info')
-        .where(FieldPath.documentId, whereIn: connectedUids)
-        .get();
-
-    return postsSnapshot.docs;
+    String userUid = _authService.getCurrentUser()!.uid;
+    return _profilesService.fetchConnectedUsersPostsAsStream(userUid);
   }
 
   void _takePicture() async {
@@ -101,17 +86,37 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     _selectedImage = File(pickedImage.path);
-    if (_auth.currentUser == null) {
+    if (!_authService.isLoggedIn()) {
       _navigateToSignInPage(context);
     }
   }
 
+  bool _isFavorited(String location) {
+    return favorites.contains(location);
+  }
+
+  Future<void> updateFavorite(String location, bool isFavorited) async {
+    String userId = _authService.getCurrentUser()!.uid;
+    final userRef = FirebaseFirestore.instance.collection('users_authenticated').doc(userId);
+
+    if (isFavorited) {
+      await userRef.update({
+        'favourites': FieldValue.arrayUnion([location]),
+      });
+    } else {
+      await userRef.update({
+        'favourites': FieldValue.arrayRemove([location]),
+      });
+    }
+  }
+
+
   Future<void> _uploadImageToFirebaseStorage() async {
-    if (_auth.currentUser == null || _selectedImage == null || _selectedLocation.isEmpty) {
+    if (!_authService.isLoggedIn() || _selectedImage == null || _selectedLocation.isEmpty) {
       return;
     }
 
-    String userId = _auth.currentUser!.uid;
+    String userId = _authService.getCurrentUser()!.uid;
     String imageName = DateTime.now().toString();
     Reference storageReference =
     FirebaseStorage.instance.ref().child('user_images/$userId/$imageName.jpg');
@@ -120,24 +125,10 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       await uploadTask.whenComplete(() async {
         String imageUrl = await storageReference.getDownloadURL();
-        await _saveDataToFirestore(imageUrl, DateTime.now());
+        await _profilesService.savePostDataToFirestore(imageUrl, _selectedLocation, DateTime.now(), userId);
       });
     } catch (error) {
       print("Error uploading image: $error");
-    }
-  }
-
-  Future<void> _saveDataToFirestore(String imageUrl, DateTime uploadTime) async {
-    if (_auth.currentUser != null) {
-      await _firestore
-          .collection('info')
-          .doc(_auth.currentUser!.uid)
-          .set({
-        'photo': imageUrl,
-        'location': _selectedLocation,
-        'uploadTime': uploadTime ?? DateTime.now(),
-      }, SetOptions(merge: true));
-
     }
   }
 
@@ -167,7 +158,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 User? user = snapshot.data;
                 return user != null
                     ? IconButton(
-                  icon: const Icon(Icons.account_circle),
+                  icon: const Icon(Icons.settings),
                   onPressed: () {
                     _openProfileDrawer(context);
                   },
@@ -195,7 +186,6 @@ class _MyHomePageState extends State<MyHomePage> {
       drawer: CustomDrawer(darkModeNotifier: widget.darkModeNotifier),
       body: Column(
         children: [
-          // First Section
           Container(
             padding: const EdgeInsets.all(20.0),
             margin: const EdgeInsets.only(left: 5.0, right: 5.0),
@@ -220,7 +210,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 const SizedBox(height: 15.0),
                 GestureDetector(
                   onTap: () {
-                    if (_auth.currentUser != null) {
+                    if (_authService.isLoggedIn()) {
                       _takePicture();
                     } else {
                       _navigateToSignInPage(context);
@@ -273,7 +263,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   onTap: _postPicture,
                   child: Container(
                     padding: const EdgeInsets.only(
-                        bottom: 10.0, top: 10.0, left: 15.0, right: 15.0),
+                        bottom: 10.0, top: 10.0, left: 15.0, right: 15.0
+                    ),
                     margin: const EdgeInsets.only(left: 293.0),
                     decoration: BoxDecoration(
                       color: AppColors.primaryColor,
@@ -303,76 +294,108 @@ class _MyHomePageState extends State<MyHomePage> {
                   'Friends spots',
                   style: TextStyle(fontSize: 22.0, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 30),
-                FutureBuilder<List<QueryDocumentSnapshot>>(
-                  future: _fetchConnectedUsersPosts(),
+                const SizedBox(height: 20),
+                StreamBuilder<List<UserModel>>(
+                  stream: _fetchConnectedUsersPostsAsStream(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const CircularProgressIndicator();
                     }
 
-                    if (snapshot.hasError) {
-                      return const Text('Your Friends have no posts.');
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text('No posts found from connected users.'));
                     }
 
-                    // Get the list of documents fetched by _fetchConnectedUsersPosts
-                    var docs = snapshot.data!;
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Text('Your friends have no posts.');
+                    }
 
-                    // Filter documents to show only those uploaded in the last 24 hours
-                    var recentDocs = docs.where((doc) {
-                      var data = doc.data() as Map<String, dynamic>;
-                      var uploadTime = data['uploadTime']?.toDate();
-                      if (uploadTime == null) return false;
+                    List<UserModel> posts = snapshot.data!;
 
-                      Duration difference = DateTime.now().difference(uploadTime);
-                      return difference.inHours <= 24;
+                    var recentPosts = posts.where((post) {
+                      if (post.uploadTime != null) {
+                        Duration difference = DateTime.now().difference(post.uploadTime!);
+                        return difference.inHours <= 24;
+                      }
+                      return false;
                     }).toList();
 
-                    if (recentDocs.isEmpty) {
-                      return const Text('Your Friends have no posts.');
+                    if (recentPosts.isEmpty) {
+                      return const Center(child: Text('Your Friends have no recent posts.'));
                     }
 
                     return SizedBox(
-                      height: 300, // Set the height of the container to match the height of your images
+                      height: 350,
                       child: ListView.builder(
-                        scrollDirection: Axis.horizontal, // Set the scroll direction to horizontal
-                        itemCount: recentDocs.length,
+                        scrollDirection: Axis.horizontal,
+                        itemCount: recentPosts.length,
                         itemBuilder: (context, index) {
-                          var doc = recentDocs[index];
-                          var data = doc.data() as Map<String, dynamic>;
-                          var photoUrl = data['photo'];
-                          var location = data['location'];
+                          final post = recentPosts[index];
 
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 5.0), // Add some horizontal spacing between cards
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min, // Ensures the column takes up only as much vertical space as its children
-                              crossAxisAlignment: CrossAxisAlignment.center, // Centers children horizontally
+                            margin: const EdgeInsets.symmetric(horizontal: 10.0),
+                            child: Stack(
+                              alignment: Alignment.topRight,
                               children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(15.0), // Optional: for rounded corners
-                                  child: Image.network(
-                                    photoUrl,
-                                    width: 200, // Set desired width
-                                    height: 200, // Set desired height
-                                    fit: BoxFit.cover, // Use BoxFit.cover to maintain aspect ratio and fill the area
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const SizedBox.shrink(); // Handle image load errors gracefully
-                                    },
-                                  ),
+                                Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(height: 9,),
+                                    Text(
+                                      post.username ?? '',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20.0,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10,),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(15.0),
+                                      child: Image.network(
+                                        post.photoUrl ?? 'No photo available',
+                                        width: 200,
+                                        height: 200,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return const SizedBox.shrink();
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 250,
+                                      ),
+                                      child: Text(
+                                        post.location ?? 'No location available',
+                                        style: const TextStyle(fontSize: 12.0),
+                                        textAlign: TextAlign.center,
+                                        softWrap: true,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 10), // Add space between image and text
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 250, // Matches the width of the image
+                                IconButton(
+                                  icon: Icon(
+                                    _isFavorited(post.location ?? 'No location available')
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: Colors.red,
                                   ),
-                                  child: Text(
-                                      location ?? 'No location available',
-                                      style: const TextStyle(fontSize: 12.0),
-                                      textAlign: TextAlign.center, // Center text alignment
-                                      softWrap: true
-                                  ),
-                                ),
+                                  onPressed: () {
+                                    setState(() {
+                                      if (_isFavorited(post.location ?? 'No location available')) {
+                                        favorites.remove(post.location);
+                                        updateFavorite(post.location ?? 'No location', false);
+                                      } else {
+                                        favorites.add(post.location ?? 'No location available');
+                                        updateFavorite(post.location ?? 'No location', true);
+                                      }
+                                    });
+                                  },
+                                )
+
                               ],
                             ),
                           );
@@ -390,7 +413,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _navigateToSignInPage(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => AuthScreen(isLogin: true)));
+    Navigator.push(context, MaterialPageRoute(builder: (context) => LoginScreen()));
   }
 }
 
