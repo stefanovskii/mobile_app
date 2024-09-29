@@ -9,6 +9,7 @@ class UserModel {
   String? photoUrl;
   String? location;
   DateTime? uploadTime;
+  List<String>? connectedUsers;
   List<String>? favourites;
 
   UserModel({
@@ -20,6 +21,7 @@ class UserModel {
     this.photoUrl,
     this.location,
     this.uploadTime,
+    this.connectedUsers,
     this.favourites
   });
 
@@ -40,6 +42,9 @@ class UserModel {
       username: data['username'] ?? '',
       firstName: data['firstName'] ?? '',
       lastName: data['lastName'] ?? '',
+      connectedUsers: data['connected_users'] != null
+          ? List<String>.from(data['connected_users'])
+          : [],
       favourites: data['favourites'] != null
           ? List<String>.from(data['favourites'])
           : [],
@@ -55,6 +60,7 @@ class UserModel {
       'photo': photoUrl,
       'location': location,
       'uploadTime': uploadTime != null ? Timestamp.fromDate(uploadTime!) : null,
+      'connected_users': connectedUsers,
       'favourites': favourites,
     };
   }

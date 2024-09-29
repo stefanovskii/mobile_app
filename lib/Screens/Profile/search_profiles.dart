@@ -76,14 +76,14 @@ class _SearchProfilesScreenState extends State<SearchProfilesScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF163D37)),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         title: const Text(
           'Search Profiles',
-          style: TextStyle(color: Colors.black, fontSize: 28),
+          style: TextStyle(color: Color(0xFF163D37), fontSize: 28),
         ),
         centerTitle: true,
       ),
@@ -92,12 +92,11 @@ class _SearchProfilesScreenState extends State<SearchProfilesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search Box with rounded edges and a shadow
             Container(
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: const Color(0xFF9C9C9C),
                 borderRadius: BorderRadius.circular(30.0),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 6.0,
@@ -125,8 +124,6 @@ class _SearchProfilesScreenState extends State<SearchProfilesScreen> {
             ),
 
             const SizedBox(height: 20),
-
-            // Loading spinner while searching
             _isSearching
                 ? const Center(child: CircularProgressIndicator())
                 : _userFound
@@ -144,10 +141,10 @@ class _SearchProfilesScreenState extends State<SearchProfilesScreen> {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: CircleAvatar(
+                          leading: const CircleAvatar(
                             backgroundColor: Colors.blueGrey,
                             radius: 25.0,
-                            child: const Icon(
+                            child: Icon(
                               Icons.person,
                               color: Colors.white,
                               size: 30.0,
@@ -162,10 +159,7 @@ class _SearchProfilesScreenState extends State<SearchProfilesScreen> {
                           ),
                           subtitle: const Text('Tap connect to send request'),
                         ),
-
                         const SizedBox(height: 10),
-
-                        // Connect button inside the profile card
                         if (!_isConnected)
                           ElevatedButton(
                             onPressed: _isRequested

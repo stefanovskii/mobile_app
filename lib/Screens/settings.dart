@@ -11,14 +11,14 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF163D37)),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         title: const Text(
           'Settings',
-          style: TextStyle(color: Colors.black, fontSize: 28),
+          style: TextStyle(color: Color(0xFF163D37), fontSize: 28),
         ),
         centerTitle: true,
       ),

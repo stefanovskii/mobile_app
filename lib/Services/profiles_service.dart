@@ -47,7 +47,16 @@ class ProfilesService {
     }
   }
 
-  Future<Map<String, dynamic>> fetchUserProfileAndConnectedUsers(User user) async {
+  Future<void> addToArchives(String userId, String favourite) async {
+    DocumentReference userDoc = _firestore.collection('users_authenticated').doc(userId);
+
+    await userDoc.update({
+      'archives': FieldValue.arrayUnion([favourite]),
+    });
+  }
+
+  //ProfileScreen - fetching the connected users
+  Future<Map<String, dynamic>> fetchConnectedUsers(User user) async {
     try {
       UserModel userModel = await fetchUserProfile(user.uid);
       DocumentSnapshot userDataDoc = await fetchUserData(user.uid);
@@ -79,16 +88,8 @@ class ProfilesService {
       };
     }
   }
-
-  Future<DocumentSnapshot> fetchUserData(String uid) async {
-    try {
-      return await _firestore.collection('users_authenticated').doc(uid).get();
-    } catch (e) {
-      print('Error fetching user data: $e');
-      rethrow;
-    }
-  }
-
+  //EditProfileScreen - for fetching the data of the user(firstName, lastName, username)
+  //FavouritesScreen - for fetching the data of the user(favourites)
   Future<UserModel> fetchUserProfile(String uid) async {
     try {
       DocumentSnapshot doc = await _firestore
@@ -102,6 +103,7 @@ class ProfilesService {
     }
   }
 
+  //EditProfileScreen - updating the user parameters in Firebase
   Future<void> updateUserProfile(UserModel userProfile) async {
     try {
       await FirebaseFirestore.instance
@@ -114,7 +116,27 @@ class ProfilesService {
     }
   }
 
-// New method to search for a user by username
+  //SearchScreen - checking whether the users are already connected
+  Future<bool> areUsersConnected(String currentUserUsername, String targetUserUsername) async {
+    if(currentUserUsername == targetUserUsername){
+      print('You are already connected with that username');
+      return true;
+    }
+    else {
+      final currentUserSnapshot = await getUserByUsername(currentUserUsername);
+      Map<String, dynamic>? data = currentUserSnapshot.data() as Map<
+          String,
+          dynamic>?;
+      List<dynamic> connectedEmails = data != null &&
+          data.containsKey('connected_users')
+          ? data['connected_users'] as List<dynamic>
+          : [];
+      return connectedEmails.contains(targetUserUsername);
+    }
+  }
+
+
+  //SearchScreen - searching the username of the user that will be send the request
   Future<UserModel?> searchUserByUsername(String username) async {
     try {
       final querySnapshot = await _firestore
@@ -133,7 +155,7 @@ class ProfilesService {
     }
   }
 
-  // Method to send a connection request
+  //SearchScreen - sending connection request to another user
   Future<void> sendConnectionRequest(String targetUsername) async {
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
@@ -149,8 +171,6 @@ class ProfilesService {
       'status': 'pending',
     });
 
-
-    // Notify the target user
     await _firestore.collection('notifications').add({
       'to': userDoc.username,
       'from': currentUsername,
@@ -160,17 +180,8 @@ class ProfilesService {
     });
   }
 
-  // Method to check if users are already connected
-  Future<bool> areUsersConnected(String currentUserUsername, String targetUserUsername) async {
-    final currentUserSnapshot = await getUserByUsername(currentUserUsername);
-    Map<String, dynamic>? data = currentUserSnapshot.data() as Map<String, dynamic>?;
-    List<dynamic> connectedEmails = data != null && data.containsKey('connected_users')
-        ? data['connected_users'] as List<dynamic>
-        : [];
-    return connectedEmails.contains(targetUserUsername);
-  }
 
-  // Fetch user data by email
+  //SearchScreen - getting the username of the user needed for checking user if users are connected
   Future<DocumentSnapshot> getUserByUsername(String username) async {
     final userSnapshot = await _firestore
         .collection('users_authenticated')
@@ -181,6 +192,16 @@ class ProfilesService {
       return userSnapshot.docs.first;
     } else {
       throw Exception('User not found');
+    }
+  }
+
+  //Method used by other methods
+  Future<DocumentSnapshot> fetchUserData(String uid) async {
+    try {
+      return await _firestore.collection('users_authenticated').doc(uid).get();
+    } catch (e) {
+      print('Error fetching user data: $e');
+      rethrow;
     }
   }
 }

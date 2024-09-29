@@ -47,10 +47,6 @@ class AuthService {
     }
   }
 
-  Future<void> sendPasswordResetEmail(String email) async {
-    return _auth.sendPasswordResetEmail(email: email);
-  }
-
   Future<void> signOut() async {
     await _auth.signOut();
   }
@@ -59,9 +55,6 @@ class AuthService {
     return _auth.currentUser;
   }
 
-  String? getCurrentUserEmail() {
-    return _auth.currentUser?.email;
-  }
 
   bool isLoggedIn() {
     return _auth.currentUser != null;

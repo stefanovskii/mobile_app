@@ -8,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:project/Models/user_model.dart';
 import 'package:project/Screens/AuthScreens/login_screen.dart';
 import 'package:project/Screens/AuthScreens/register_screen.dart';
+import 'package:project/Screens/Profile/profile.dart';
 import 'package:project/Screens/Profile/search_profiles.dart';
 import 'package:project/Services/auth_service.dart';
 import 'package:project/Constants/app_colors.dart';
@@ -40,8 +41,6 @@ class MyApp extends StatelessWidget {
             '/': (context) => MyHomePage(darkModeNotifier: _darkModeNotifier),
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
-            '/notifications': (context) => NotificationsScreen(),
-            '/searchProfiles': (context) => SearchProfilesScreen(),
           },
         );
       },

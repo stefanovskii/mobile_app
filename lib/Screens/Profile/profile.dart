@@ -4,20 +4,20 @@ import 'package:project/Models/user_model.dart';
 import 'package:project/Services/profiles_service.dart';
 import 'package:project/Widgets/custom_app_bar.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfileScreen extends StatefulWidget {
   final User user;
 
-  const ProfilePage({Key? key, required this.user}) : super(key: key);
+  const ProfileScreen({Key? key, required this.user}) : super(key: key);
 
   @override
-  _ProfilePageState createState() => _ProfilePageState();
+  _ProfileScreenState createState() => _ProfileScreenState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfileScreenState extends State<ProfileScreen> {
   final ProfilesService _profilesService = ProfilesService();
 
-  Future<Map<String, dynamic>> _fetchUserProfileAndConnectedUsers() {
-    return _profilesService.fetchUserProfileAndConnectedUsers(widget.user);
+  Future<Map<String, dynamic>> _fetchConnectedUsers() {
+    return _profilesService.fetchConnectedUsers(widget.user);
   }
 
   Widget _buildConnectedUserCard(String username) {
@@ -96,19 +96,19 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: const Color(0xFF84A59D),
         automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF163D37)),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         title: const Text(
           'Profile',
-          style: TextStyle(color: Colors.black, fontSize: 28),
+          style: TextStyle(color: Color(0xFF163D37), fontSize: 28),
         ),
         centerTitle: true,
       ),
       body: FutureBuilder<Map<String, dynamic>>(
-        future: _fetchUserProfileAndConnectedUsers(),
+        future: _fetchConnectedUsers(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -119,8 +119,6 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           UserModel? userProfile = snapshot.data?['userProfile'];
-          List<String>? connectedUsernames = List<String>.from(snapshot.data?['connectedUsernames'] ?? []);
-
           if (userProfile == null) {
             return const Center(child: Text('User profile not found.'));
           }
@@ -140,19 +138,18 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                connectedUsernames.isNotEmpty
+                (userProfile.connectedUsers?.isNotEmpty ?? false)
                     ? SizedBox(
                   height: 100,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: connectedUsernames.length,
+                    itemCount: userProfile.connectedUsers?.length ?? 0,
                     itemBuilder: (context, index) {
-                      return _buildConnectedUserCard(connectedUsernames[index]);
+                      return _buildConnectedUserCard(userProfile.connectedUsers![index]);
                     },
                   ),
                 )
                     : const Center(child: Text('No connected users yet.')),
-
                 const SizedBox(height: 20),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),

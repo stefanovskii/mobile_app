@@ -36,7 +36,7 @@ class CustomDrawer extends StatelessWidget {
                     child: Transform.translate(
                       offset: const Offset(0, -4),
                       child: const Text(
-                        'Menu',
+                        'On The Spot',
                         style: TextStyle(
                           fontSize: 20.0,
                           color: Colors.white
@@ -72,7 +72,7 @@ class CustomDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ProfilePage(user: FirebaseAuth.instance.currentUser!),
+                  builder: (context) => ProfileScreen(user: FirebaseAuth.instance.currentUser!),
                 ),
               );
             },
@@ -91,7 +91,7 @@ class CustomDrawer extends StatelessWidget {
               UserModel userModel = UserModel.fromJson(snapshot);
 
               Navigator.push(context,
-                MaterialPageRoute(builder: (context) => EditProfilePage(user: currentUser, userModel: userModel),
+                MaterialPageRoute(builder: (context) => EditProfileScreen(user: currentUser, userModel: userModel),
                 ),
               );
             },
@@ -120,10 +120,11 @@ class CustomDrawer extends StatelessWidget {
               ),
             ),
             onTap: (){
+              User currentUser = FirebaseAuth.instance.currentUser!;
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FavouritesScreen(),
+                  builder: (context) => FavouritesScreen(user: currentUser),
                 ),
               );
             },

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
-class ImageInput extends StatefulWidget {
+class ImageWidget extends StatefulWidget {
   final Function(File pickedImage) onImagePicked;
 
-  ImageInput({required this.onImagePicked});
+  ImageWidget({required this.onImagePicked});
 
   @override
-  _ImageInputState createState() => _ImageInputState();
+  _ImageWidgetState createState() => _ImageWidgetState();
 }
 
-class _ImageInputState extends State<ImageInput> {
+class _ImageWidgetState extends State<ImageWidget> {
   File? _pickedImage;
 
   Future<void> _pickImage() async {

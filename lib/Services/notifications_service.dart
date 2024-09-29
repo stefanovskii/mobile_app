@@ -5,15 +5,19 @@ import 'package:project/Models/notification.dart';
 class NotificationsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-
-  Future<void> sendNotification(NotificationModel notification) async {
+  //NotificationsScreen - get logged in username to know which notifications to show
+  Future<String?> getUsernameForCurrentUser(String userId) async {
     try {
-      await _firestore.collection('notifications').add(notification.toMap());
+      DocumentSnapshot userDoc = await _firestore.collection('users_authenticated').doc(userId).get();
+      if (userDoc.exists) {
+        return userDoc.get('username') as String?;
+      }
     } catch (e) {
-      print('Error sending notification: $e');
+      print('Error fetching username: $e');
     }
+    return null;
   }
-
+  //NotificationScreen - fetching the notifications to the user
   Future<List<NotificationModel>> fetchNotificationsForUser(String userEmail) async {
     try {
       QuerySnapshot snapshot = await _firestore
@@ -28,19 +32,7 @@ class NotificationsService {
     }
   }
 
-  Future<String?> getUsernameForCurrentUser(String userId) async {
-    try {
-      DocumentSnapshot userDoc = await _firestore.collection('users_authenticated').doc(userId).get();
-      if (userDoc.exists) {
-        return userDoc.get('username') as String?;
-      }
-    } catch (e) {
-      print('Error fetching username: $e');
-    }
-    return null;
-  }
-
-  // Accepting the connection request and updating and deleting the request
+  //NotificationScreen - accepting the connection request send
   Future<void> acceptConnectionRequest(String fromUsername, String toUsername) async {
     try {
       QuerySnapshot querySnapshot = await _firestore
@@ -60,7 +52,6 @@ class NotificationsService {
           'timestamp': FieldValue.serverTimestamp(),
         });
         await _deleteNotification(fromUsername, toUsername);
-        // To show text of the accepted request
         await _firestore.collection('notifications').add({
           'from': fromUsername,
           'to': toUsername,
@@ -76,7 +67,7 @@ class NotificationsService {
     }
   }
 
-  // Updating the connected_users array when users are connected
+  //NotificationScreen - updating the connected_users in users_authenticated
   Future<void> _updateConnectedUsers(String fromEmail, String toEmail) async {
     try {
 
@@ -108,7 +99,8 @@ class NotificationsService {
       throw e;
     }
   }
-  // Deleting notification after received
+
+  //NotificationScreen - deleting the notification
   Future<void> _deleteNotification(String fromEmail, String toEmail) async {
     try {
       final notificationSnapshot = await _firestore
@@ -127,6 +119,4 @@ class NotificationsService {
       throw e;
     }
   }
-
-
 }
