@@ -5,6 +5,7 @@ import 'package:project/Models/user_model.dart';
 class ProfilesService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  //MainScreen - fetching the posts from logged in user
   Stream<List<UserModel>> fetchConnectedUsersPostsAsStream(String userUid) {
     return _firestore
         .collection('users_authenticated')
@@ -33,6 +34,7 @@ class ProfilesService {
     });
   }
 
+  //MainScreen - saving the data in firebase
   Future<void> savePostDataToFirestore(
       String imageUrl, String location, DateTime uploadTime, String userUid) async {
     try {
@@ -47,13 +49,37 @@ class ProfilesService {
     }
   }
 
+  //FavouritesScreen - adding the archives in firebase
   Future<void> addToArchives(String userId, String favourite) async {
     DocumentReference userDoc = _firestore.collection('users_authenticated').doc(userId);
 
     await userDoc.update({
       'archives': FieldValue.arrayUnion([favourite]),
+      'favourites': FieldValue.arrayRemove([favourite])
     });
   }
+
+  //ArchivesScreen - fetcing the archives from firebase
+  Future<List<String>> fetchArchivedLocations(String userId) async {
+    DocumentSnapshot userDoc = await _firestore.collection('users_authenticated').doc(userId).get();
+
+    if (userDoc.exists && userDoc.data() != null) {
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      return List<String>.from(userData['archives'] ?? []);
+    }
+
+    return [];
+  }
+
+  //ArchivesScreen - removing elements from archives
+  Future<void> removeFromArchives(String userId, String archive) async {
+    DocumentReference userDoc = _firestore.collection('users_authenticated').doc(userId);
+
+    await userDoc.update({
+      'archives': FieldValue.arrayRemove([archive]),
+    });
+  }
+
 
   //ProfileScreen - fetching the connected users
   Future<Map<String, dynamic>> fetchConnectedUsers(User user) async {
@@ -69,8 +95,9 @@ class ProfilesService {
           'connectedUsersCount': 0,
         };
       }
+
       Map<String, dynamic>? data = userDataDoc.data() as Map<String, dynamic>?;
-      List<dynamic> connectedEmails = data != null && data.containsKey('connected_users')
+      List<dynamic> connectedEmails = (data != null && data['connected_users'] != null)
           ? data['connected_users'] as List<dynamic>
           : [];
 
@@ -127,8 +154,7 @@ class ProfilesService {
       Map<String, dynamic>? data = currentUserSnapshot.data() as Map<
           String,
           dynamic>?;
-      List<dynamic> connectedEmails = data != null &&
-          data.containsKey('connected_users')
+      List<dynamic> connectedEmails = (data != null && data['connected_users'] != null)
           ? data['connected_users'] as List<dynamic>
           : [];
       return connectedEmails.contains(targetUserUsername);

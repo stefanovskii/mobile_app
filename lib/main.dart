@@ -8,8 +8,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:project/Models/user_model.dart';
 import 'package:project/Screens/AuthScreens/login_screen.dart';
 import 'package:project/Screens/AuthScreens/register_screen.dart';
-import 'package:project/Screens/Profile/profile.dart';
-import 'package:project/Screens/Profile/search_profiles.dart';
 import 'package:project/Services/auth_service.dart';
 import 'package:project/Constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
@@ -34,9 +32,11 @@ class MyApp extends StatelessWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: _darkModeNotifier,
       builder: (context, isDarkMode, child) {
+        final User? user = FirebaseAuth.instance.currentUser;
+        String initialRoute = (user != null) ? '/' : '/login';
         return MaterialApp(
           theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
-          initialRoute: '/',
+          initialRoute: initialRoute,
           routes: {
             '/': (context) => MyHomePage(darkModeNotifier: _darkModeNotifier),
             '/login': (context) => const LoginScreen(),
@@ -157,7 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 User? user = snapshot.data;
                 return user != null
                     ? IconButton(
-                  icon: const Icon(Icons.settings),
+                  icon: const Icon(Icons.menu),
                   onPressed: () {
                     _openProfileDrawer(context);
                   },
@@ -226,15 +226,23 @@ class _MyHomePageState extends State<MyHomePage> {
                       children: [
                         const Text(
                           'Share where are you...',
-                          style: TextStyle(fontSize: 18.0),
+                          style: TextStyle(
+                            fontSize: 18.0,
+                            color: Color(0xFFA4C2BA)
+                          ),
                         ),
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.camera_alt_outlined),
+                              icon: const Icon(
+                                Icons.camera_alt_outlined,
+                                  color: Color(0xFFA4C2BA)
+                              ),
                               onPressed: _takePicture,
                             ),
+
                             IconButton(
                               onPressed: () {
                                 Navigator.push(
@@ -245,11 +253,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                           setState(() {
                                             _selectedLocation = location;
                                           });
-                                        },
+                                        }, userId: FirebaseAuth.instance.currentUser!.uid,
                                       )),
                                 );
                               },
-                              icon: const Icon(Icons.location_on_outlined),
+                              icon: const Icon(Icons.location_on_outlined), color: const Color(0xFFA4C2BA)
                             ),
                           ],
                         ),

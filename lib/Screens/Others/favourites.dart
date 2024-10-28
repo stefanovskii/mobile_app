@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:project/Models/user_model.dart';
 import 'package:project/Services/profiles_service.dart';
 
+import '../../Constants/app_colors.dart';
+
 class FavouritesScreen extends StatefulWidget {
   final User user;
   const FavouritesScreen({Key? key, required this.user}) : super(key: key);
@@ -22,6 +24,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   Future<void> _addToArchives(String favourite) async {
     try {
       await _profilesService.addToArchives(widget.user.uid, favourite);
+      setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$favourite added to archives')),
       );
@@ -38,14 +41,14 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF163D37)),
+          icon: const Icon(Icons.arrow_back, color: AppColors.titles),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         title: const Text(
           'Favourites',
-          style: TextStyle(color: Color(0xFF163D37), fontSize: 28),
+          style: TextStyle(color: AppColors.titles, fontSize: 28),
         ),
         centerTitle: true,
       ),

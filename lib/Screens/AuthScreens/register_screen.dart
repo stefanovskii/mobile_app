@@ -61,7 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Padding(
-              padding: EdgeInsets.only(bottom: 70.0),
+              padding: EdgeInsets.only(bottom: 25.0),
               child: Text(
                 "On The Spot",
                 style: TextStyle(

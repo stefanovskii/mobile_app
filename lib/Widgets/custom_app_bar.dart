@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project/Constants/app_colors.dart';
 import 'package:project/Models/user_model.dart';
 
 class CustomAppBar extends StatelessWidget {
@@ -10,7 +11,7 @@ class CustomAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.25,
-      color: const Color(0xFF84A59D),
+      color: AppColors.profileBackground,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

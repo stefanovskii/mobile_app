@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:project/Constants/app_colors.dart';
 import 'package:project/Models/user_model.dart';
 import 'package:project/Services/profiles_service.dart';
 import 'package:project/Widgets/custom_app_bar.dart';
@@ -30,17 +31,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF84A59D),
+        backgroundColor: AppColors.profileBackground,
         automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF163D37)),
+          icon: const Icon(Icons.arrow_back, color: AppColors.titles),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         title: const Text(
           'Edit Profile',
-          style: TextStyle(color: Color(0xFF163D37), fontSize: 28),
+          style: TextStyle(color: AppColors.titles, fontSize: 28),
         ),
         centerTitle: true,
       ),

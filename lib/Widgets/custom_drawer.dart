@@ -5,11 +5,12 @@ import 'package:project/Models/user_model.dart';
 import 'package:project/Screens/Profile/edit_profile.dart';
 import 'package:project/Screens/Profile/profile.dart';
 import 'package:project/Screens/Profile/search_profiles.dart';
+import 'package:project/Screens/Others/archives_screen.dart';
 import 'package:project/Services/auth_service.dart';
 import 'package:project/Services/profiles_service.dart';
 import 'package:project/Constants/app_colors.dart';
-import 'package:project/Screens/Profile/favourites.dart';
-import 'package:project/Screens/settings.dart';
+import 'package:project/Screens/Others/favourites.dart';
+import 'package:project/Screens/Others/settings.dart';
 
 class CustomDrawer extends StatelessWidget {
   final ValueNotifier<bool> darkModeNotifier;
@@ -125,6 +126,23 @@ class CustomDrawer extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => FavouritesScreen(user: currentUser),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.archive),
+            title: const Text('Archives',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold
+              ),
+            ),
+            onTap: (){
+              User currentUser = FirebaseAuth.instance.currentUser!;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ArchivesScreen(user: currentUser),
                 ),
               );
             },
